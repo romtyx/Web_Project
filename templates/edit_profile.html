@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Редактировать профиль{% endblock %}
+{% block content %}
+<h2>Редактировать профиль</h2>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+        {{ form.description.label }}<br>
+        {{ form.description(class="form-control", rows=4) }}
+    </div>
+    <div class="mb-3">
+        {{ form.avatar.label }}<br>
+        {{ form.avatar(class="form-control") }}
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+</form>
+{% endblock %}

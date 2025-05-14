@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Профиль{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <img src="{{ user.avatar }}" alt="avatar" width="100" class="rounded-circle mb-3">
+        <h5>{{ user.username }}</h5>
+        <p>{{ user.description or 'Нет описания' }}</p>
+        {% if current_user.is_authenticated and current_user.id == user.id %}
+            <a href="{{ url_for('edit_profile') }}" class="btn btn-outline-primary btn-sm">Редактировать профиль</a>
+        {% endif %}
+    </div>
+    <div class="col-md-9">
+        <h3>Посты пользователя</h3>
+        {% for post in posts %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a></h5>
+                <p class="card-text">{{ post.content[:150] }}...</p>
+                <small class="text-muted">{{ post.date.strftime('%d.%m.%Y %H:%M') }}</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

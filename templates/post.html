@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block content %}
+<h2>{{ post.title }}</h2>
+<p>{{ post.content }}</p>
+<small class="text-muted">Автор: {{ post.author.username }}, {{ post.date.strftime('%d.%m.%Y %H:%M') }}</small>
+
+{% if current_user.is_authenticated and current_user.id == post.author.id %}
+    <div class="mt-3">
+        <a href="{{ url_for('edit_post', post_id=post.id) }}" class="btn btn-sm btn-warning me-2">Редактировать</a>
+        <a href="{{ url_for('delete_post', post_id=post.id) }}" class="btn btn-sm btn-danger">Удалить</a>
+    </div>
+{% endif %}
+
+<hr>
+
+<h4>Оставить комментарий:</h4>
+<form method="POST" class="mb-3">
+    {{ form.hidden_tag() }}
+    {{ form.content(class="form-control") }}
+    <button type="submit" class="btn btn-primary mt-2">Отправить</button>
+</form>
+
+<h4>Комментарии:</h4>
+{% for comment in comments %}
+<div class="card mb-2">
+    <div class="card-body">
+        {{ comment.content }}
+        <br>
+        <small class="text-muted">{{ comment.author.username }} • {{ comment.date.strftime('%d.%m.%Y %H:%M') }}</small>
+        {% if current_user.is_authenticated and current_user.id == comment.author.id %}
+            <a href="{{ url_for('delete_comment', comment_id=comment.id, post_id=post.id) }}" class="btn btn-sm btn-danger float-end">Удалить</a>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
