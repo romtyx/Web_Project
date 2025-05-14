@@ -26,6 +26,7 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(120), nullable=False)
     avatar = db.Column(db.String(255))
     description = db.Column(db.Text)
+    is_admin = db.Column(db.Boolean, default=False)
     posts = db.relationship('Post', backref='author', lazy=True)
     comments = db.relationship('Comment', backref='author', lazy=True)
 
@@ -157,8 +158,10 @@ def create_post():
 @login_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.author.id != current_user.id:
-        flash("Вы не можете редактировать чужой пост.")
+
+    # Разрешаем редактировать автору ИЛИ админу
+    if post.author.id != current_user.id and not current_user.is_admin:
+        flash("У вас нет прав на редактирование этого поста.")
         return redirect(url_for('view_post', post_id=post_id))
 
     form = PostForm(obj=post)
@@ -174,9 +177,11 @@ def edit_post(post_id):
 @login_required
 def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.author.id != current_user.id:
-        flash("Вы не можете удалить чужой пост.")
+    # Проверка прав
+    if post.author.id != current_user.id and not current_user.is_admin:
+        flash("У вас нет прав на удаление этого поста.")
         return redirect(url_for('index'))
+
     db.session.delete(post)
     db.session.commit()
     flash("Пост удален")
