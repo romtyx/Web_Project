@@ -3,7 +3,14 @@
 {% block content %}
 <h2>{{ post.title }}</h2>
 <p>{{ post.content }}</p>
-<small class="text-muted">Автор: {{ post.author.username }}, {{ post.date.strftime('%d.%m.%Y %H:%M') }}</small>
+<div class="d-flex align-items-center mb-3">
+    <img src="{{ post.author.avatar }}" alt="avatar" width="32" class="rounded-circle me-2">
+    <small class="text-muted">
+        Автор:
+        <a href="{{ url_for('profile', user_id=post.author.id) }}">{{ post.author.username }}</a>,
+        {{ post.date.strftime('%d.%m.%Y %H:%M') }}
+    </small>
+</div>
 
 {% if current_user.is_authenticated and current_user.id == post.author.id %}
     <div class="mt-3">
@@ -14,12 +21,16 @@
 
 <hr>
 
-<h4>Оставить комментарий:</h4>
-<form method="POST" class="mb-3">
-    {{ form.hidden_tag() }}
-    {{ form.content(class="form-control") }}
-    <button type="submit" class="btn btn-primary mt-2">Отправить</button>
-</form>
+{% if current_user.is_authenticated %}
+    <h4>Оставить комментарий:</h4>
+    <form method="POST" class="mb-3">
+        {{ form.hidden_tag() }}
+        {{ form.content(class="form-control") }}
+        <button type="submit" class="btn btn-primary mt-2">Отправить</button>
+    </form>
+{% else %}
+    <p><a href="{{ url_for('login') }}">Войдите</a>, чтобы оставлять комментарии.</p>
+{% endif %}
 
 <h4>Комментарии:</h4>
 {% for comment in comments %}
@@ -27,7 +38,13 @@
     <div class="card-body">
         {{ comment.content }}
         <br>
-        <small class="text-muted">{{ comment.author.username }} • {{ comment.date.strftime('%d.%m.%Y %H:%M') }}</small>
+        <div class="d-flex align-items-center">
+            <img src="{{ comment.author.avatar }}" alt="avatar" width="24" class="rounded-circle me-2">
+            <small class="text-muted">
+                <a href="{{ url_for('profile', user_id=comment.author.id) }}">{{ comment.author.username }}</a> •
+                {{ comment.date.strftime('%d.%m.%Y %H:%M') }}
+            </small>
+        </div>
         {% if current_user.is_authenticated and current_user.id == comment.author.id %}
             <a href="{{ url_for('delete_comment', comment_id=comment.id, post_id=post.id) }}" class="btn btn-sm btn-danger float-end">Удалить</a>
         {% endif %}

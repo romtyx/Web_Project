@@ -9,6 +9,10 @@ body {
     background-color: lime !important;
 }
 
+.navbar-brand {
+    color: black !important;
+}
+
 .card {
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -56,4 +60,9 @@ body {
 
 .pagination .page-link:hover {
     background-color: #e9ecef;
+}
+
+.rounded-circle {
+    object-fit: cover;
+    border: 1px solid #ddd;
 }

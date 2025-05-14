@@ -19,7 +19,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# === Модели ===
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -29,12 +29,14 @@ class User(UserMixin, db.Model):
     posts = db.relationship('Post', backref='author', lazy=True)
     comments = db.relationship('Comment', backref='author', lazy=True)
 
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,32 +45,37 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
 
-# === Формы ===
+
 class RegisterForm(FlaskForm):
     username = StringField('Имя пользователя', validators=[DataRequired()])
     password = PasswordField('Пароль', validators=[DataRequired()])
     description = TextAreaField('Описание')
 
+
 class LoginForm(FlaskForm):
     username = StringField('Имя пользователя', validators=[DataRequired()])
     password = PasswordField('Пароль', validators=[DataRequired()])
+
 
 class PostForm(FlaskForm):
     title = StringField('Заголовок', validators=[DataRequired()])
     content = TextAreaField('Текст поста', validators=[DataRequired()])
 
+
 class CommentForm(FlaskForm):
     content = TextAreaField('Комментарий', validators=[DataRequired()])
+
 
 class EditProfileForm(FlaskForm):
     description = TextAreaField('Описание')
     avatar = StringField('Аватар (URL)')
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# === Роуты ===
+
 @app.route('/')
 def index():
     sort_by = request.args.get('sort', 'new')
@@ -95,6 +102,7 @@ def index():
 
     return render_template('index.html', posts=posts, sort_by=sort_by, pagination=pagination, search_query=search_query)
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
@@ -111,6 +119,7 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -123,12 +132,14 @@ def login():
         flash("Неверный логин или пароль")
     return render_template('login.html', form=form)
 
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     flash("Вы вышли из системы")
     return redirect(url_for('index'))
+
 
 @app.route('/create_post', methods=['GET', 'POST'])
 @login_required
@@ -140,6 +151,7 @@ def create_post():
         db.session.commit()
         return redirect(url_for('index'))
     return render_template('edit_post.html', form=form, title="Создать пост")
+
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
 @login_required
@@ -157,6 +169,7 @@ def edit_post(post_id):
         return redirect(url_for('view_post', post_id=post_id))
     return render_template('edit_post.html', form=form, title="Редактировать пост", post=post)
 
+
 @app.route('/delete_post/<int:post_id>')
 @login_required
 def delete_post(post_id):
@@ -168,6 +181,7 @@ def delete_post(post_id):
     db.session.commit()
     flash("Пост удален")
     return redirect(url_for('index'))
+
 
 @app.route('/delete_comment/<int:comment_id>/<int:post_id>')
 @login_required
@@ -181,11 +195,13 @@ def delete_comment(comment_id, post_id):
     flash("Комментарий удален")
     return redirect(url_for('view_post', post_id=post_id))
 
+
 @app.route('/profile/<int:user_id>')
 def profile(user_id):
     user = User.query.get_or_404(user_id)
     posts = Post.query.filter_by(user_id=user_id).order_by(Post.date.desc()).all()
     return render_template('profile.html', user=user, posts=posts)
+
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
@@ -200,6 +216,7 @@ def edit_profile():
         return redirect(url_for('profile', user_id=user.id))
     return render_template('edit_profile.html', form=form, user=user)
 
+
 @app.route('/post/<int:post_id>', methods=['GET', 'POST'])
 def view_post(post_id):
     post = Post.query.get_or_404(post_id)
@@ -212,12 +229,6 @@ def view_post(post_id):
 
     comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.date.asc()).all()
     return render_template('post.html', post=post, comments=comments, form=form)
-
-
-# @app.after_request
-# def add_header(response):
-#     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-#     return response
 
 
 if __name__ == '__main__':
