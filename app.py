@@ -1,9 +1,11 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from wtforms import StringField, PasswordField, TextAreaField
 from wtforms.validators import DataRequired
+from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import os
 
@@ -18,6 +20,8 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 
 class User(UserMixin, db.Model):
@@ -69,7 +73,18 @@ class CommentForm(FlaskForm):
 
 class EditProfileForm(FlaskForm):
     description = TextAreaField('Описание')
-    avatar = StringField('Аватар (URL)')
+    avatar = FileField('Аватар (изображение)', validators=[
+        FileAllowed(['jpg', 'png', 'jpeg', 'gif'], 'Только изображения!')
+    ])
+
+
+class MakeAdminForm(FlaskForm):
+    username = StringField('Имя пользователя', validators=[DataRequired()])
+
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @login_manager.user_loader
@@ -211,15 +226,26 @@ def profile(user_id):
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    user = current_user
-    form = EditProfileForm(obj=user)
+    form = EditProfileForm(obj=current_user)
+
     if form.validate_on_submit():
-        user.description = form.description.data
-        user.avatar = form.avatar.data
+        # Получаем загруженный файл
+        avatar = form.avatar.data
+
+        # Обновляем описание
+        current_user.description = form.description.data
+
+        # Если выбран новый аватар
+        if avatar and allowed_file(avatar.filename):
+            filename = secure_filename(f"{current_user.id}_{avatar.filename}")
+            avatar.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            current_user.avatar = f'uploads/{filename}'
+
         db.session.commit()
-        flash("Профиль обновлён!")
-        return redirect(url_for('profile', user_id=user.id))
-    return render_template('edit_profile.html', form=form, user=user)
+        flash("Профиль успешно обновлён!")
+        return redirect(url_for('profile', user_id=current_user.id))
+
+    return render_template('edit_profile.html', form=form, user=current_user)
 
 
 @app.route('/post/<int:post_id>', methods=['GET', 'POST'])
@@ -234,6 +260,69 @@ def view_post(post_id):
 
     comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.date.asc()).all()
     return render_template('post.html', post=post, comments=comments, form=form)
+
+
+@app.route('/admin/make_admin', methods=['GET', 'POST'])
+@login_required
+def make_admin():
+    if not current_user.is_admin:
+        abort(403)
+
+    form = MakeAdminForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user:
+            user.is_admin = True
+            db.session.commit()
+            flash(f"Пользователь {user.username} назначен администратором")
+        else:
+            flash("Пользователь не найден")
+        return redirect(url_for('make_admin'))
+
+    return render_template('make_admin.html', form=form)
+
+
+@app.route('/admin/users', methods=['GET', 'POST'])
+@login_required
+def admin_users():
+    if not current_user.is_admin:
+        abort(403)
+
+    search_query = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+
+    # Поиск пользователей
+    users_query = User.query
+    if search_query:
+        users_query = users_query.filter(User.username.ilike(f'%{search_query}%'))
+
+    pagination = users_query.paginate(page=page, per_page=10)
+    users = pagination.items
+
+    # Обработка изменения прав администратора
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        is_admin_value = request.form.get(f'is_admin_{user_id}') == 'on'
+
+        user = User.query.get_or_404(user_id)
+
+        # Нельзя снять права с себя
+        if user.id == current_user.id and not is_admin_value:
+            flash("Вы не можете лишить себя прав администратора")
+        else:
+            user.is_admin = is_admin_value
+            db.session.commit()
+            flash(f"Права пользователя {user.username} обновлены")
+
+        return redirect(url_for('admin_users', search=search_query))
+
+    return render_template('admin_users.html', users=users, pagination=pagination, search_query=search_query)
+
+
+@app.route('/debug-admins')
+def debug_admins():
+    admins = User.query.filter_by(is_admin=True).all()
+    return '<br>'.join([f'{u.username} (ID: {u.id})' for u in admins])
 
 
 if __name__ == '__main__':

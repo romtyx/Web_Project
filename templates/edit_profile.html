@@ -2,16 +2,24 @@
 {% block title %}Редактировать профиль{% endblock %}
 {% block content %}
 <h2>Редактировать профиль</h2>
-<form method="POST">
+<form method="POST" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
+
     <div class="mb-3">
-        {{ form.description.label }}<br>
-        {{ form.description(class="form-control", rows=4) }}
+        {{ form.description.label(class="form-label") }}
+        {{ form.description(class="form-control") }}
     </div>
+
     <div class="mb-3">
         {{ form.avatar.label }}<br>
-        {{ form.avatar(class="form-control") }}
+        {{ form.avatar }}
+        {% if form.avatar.errors %}
+            {% for error in form.avatar.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        {% endif %}
     </div>
-    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+
+    <button type="submit" class="btn btn-primary">Сохранить</button>
 </form>
 {% endblock %}

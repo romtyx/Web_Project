@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Назначить администратора{% endblock %}
+{% block content %}
+<h3>Назначить администратора</h3>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+        {{ form.username.label(class="form-label") }}
+        {{ form.username(class="form-control") }}
+        {% for error in form.username.errors %}
+            <span class="text-danger">{{ error }}</span>
+        {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary">Назначить админом</button>
+</form>
+{% endblock %}
