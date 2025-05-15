@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash, abo
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from wtforms import StringField, PasswordField, TextAreaField
+from werkzeug.datastructures import FileStorage
 from wtforms.validators import DataRequired
 from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
@@ -229,17 +230,15 @@ def edit_profile():
     form = EditProfileForm(obj=current_user)
 
     if form.validate_on_submit():
-        # Получаем загруженный файл
+        current_user.description = form.description.data
         avatar = form.avatar.data
 
-        # Обновляем описание
-        current_user.description = form.description.data
-
-        # Если выбран новый аватар
-        if avatar and allowed_file(avatar.filename):
-            filename = secure_filename(f"{current_user.id}_{avatar.filename}")
-            avatar.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            current_user.avatar = f'uploads/{filename}'
+        if avatar:
+            if isinstance(avatar, FileStorage) and avatar.filename != '':
+                if allowed_file(avatar.filename):
+                    filename = secure_filename(f"{current_user.id}_{avatar.filename}")
+                    avatar.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    current_user.avatar = f'uploads/{filename}'
 
         db.session.commit()
         flash("Профиль успешно обновлён!")
